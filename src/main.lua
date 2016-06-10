@@ -19,14 +19,18 @@ function love.load()
          img_width = 18 
       }
    }
+   images = {
+      arrow  = love.graphics.newImage("assets/arrow2.png"),
+      archer = love.graphics.newImage("assets/archer.png")
+   }
 
-   arrow_img = love.graphics.newImage("assets/arrow2.png")
 
-   archer = {}
-   archer.img = love.graphics.newImage("assets/archer.png")
-   archer.x = 300
-   archer.y = 200
-   archer.facing = "right"
+   archer = {
+      img = images.archer,
+      x = 300,
+      y = 200,
+      facing = "right"
+   }
    
 
    arrow_list = {
@@ -47,7 +51,7 @@ function love.update(dt)
    end
    if love.keyboard.isDown( const.key.shoot ) then
       new_arrow = { 
-         img = arrow_img, 
+         img = images.arrow, 
          x = archer.x + const.archer.arrow_offset.x,
          y = archer.y + const.archer.arrow_offset.y,
          facing = archer.facing
