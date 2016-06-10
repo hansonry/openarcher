@@ -3,10 +3,21 @@
 
 function love.load()
 
-   const = 
-   {
-      archer = { speed = 100, img_width = 32, arrow_offset = { x = 0, y = 10 } },
-      arrow  = { speed = 200, img_width = 18 }
+   const = {
+      key = {
+         left = "a",
+         right = "d",
+         shoot = "rctrl"
+      },
+      archer = { 
+         speed = 100, 
+         img_width = 32, 
+         arrow_offset = { x = 0, y = 10 } 
+      },
+      arrow = { 
+         speed = 200, 
+         img_width = 18 
+      }
    }
 
    arrow_img = love.graphics.newImage("assets/arrow2.png")
@@ -26,15 +37,15 @@ end
 
 
 function love.update(dt)
-   if love.keyboard.isDown( "a" ) then
+   if love.keyboard.isDown( const.key.left ) then
       archer.x = archer.x - dt * const.archer.speed
       archer.facing = "left"
    end
-   if love.keyboard.isDown( "d" ) then
+   if love.keyboard.isDown( const.key.right ) then
       archer.x = archer.x + dt * const.archer.speed
       archer.facing = "right"
    end
-   if love.keyboard.isDown( "rctrl" ) then
+   if love.keyboard.isDown( const.key.shoot ) then
       new_arrow = { 
          img = arrow_img, 
          x = archer.x + const.archer.arrow_offset.x,
