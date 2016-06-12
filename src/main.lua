@@ -108,17 +108,25 @@ function love.update(dt)
       table.insert(arrow_list, new_arrow)
    end
 
+   -- ground detection
+   for i, tile in ipairs(map.data) do
+      local x = tile.x * const.map.img_width
+      local y = tile.y * const.map.img_height
+      if archer.x >= x and archer.y >= y and 
+         archer.x < x + const.map.img_width and archer.y < y + const.map.img_height then
+         archer.vy = 0
+         archer.y = y
+         break
+      end
+     
+   end
+
+
    -- archer falling
    if true then
       archer.vy = archer.vy + const.phys.grav * dt
    end
 
-   -- ground detection
-   for i, tile in ipairs(map.data) do
-      local x = tile.x * const.map.img_width
-      local y = tile.y * const.map.img_height
-      if
-   end
 
    archer.y = archer.y + archer.vy * dt
 
