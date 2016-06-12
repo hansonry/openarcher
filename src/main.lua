@@ -12,7 +12,13 @@ function love.load()
       archer = { 
          speed        = 100, 
          img_width    = 32, 
-         arrow_offset = { x = 0, y = 10 } 
+         arrow_offset = { x = 0, y = 10 },
+         hitbox = {
+            x1 = 6,
+            y1 = 4,
+            x2 = 6 + 18,
+            y2 = 4 + 62,
+         }
       },
       arrow = { 
          speed     = 200, 
@@ -123,9 +129,7 @@ function love.update(dt)
 
 
    -- archer falling
-   if true then
-      archer.vy = archer.vy + const.phys.grav * dt
-   end
+   archer.vy = archer.vy + const.phys.grav * dt
 
 
    archer.y = archer.y + archer.vy * dt
@@ -142,12 +146,22 @@ end
 
 function love.draw()
    --love.graphics.print("Hello World!", 400, 300)
+
+   -- Draw Archer
    if archer.facing == "right" then
       love.graphics.draw(archer.img, archer.x, archer.y)
    else
       -- Flip the archer. This also changes it's x pos
       love.graphics.draw(archer.img, archer.x + const.archer.img_width, archer.y, 0, -1, 1)
    end
+
+   -- Draw Archer Hitbox
+   love.graphics.line(
+      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1,
+      archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y1,
+      archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y2,
+      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y2,
+      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1)
 
    -- Arrows
    for i,arrow in ipairs(arrow_list) do
@@ -169,4 +183,6 @@ function love.draw()
    end
 
 end
+
+
 
