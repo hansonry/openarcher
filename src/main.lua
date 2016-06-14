@@ -95,6 +95,10 @@ end
 
 
 function love.update(dt)
+   local prev = {
+      x = archer.x,
+      y = archer.y
+   }
    -- archer
    if love.keyboard.isDown( const.key.left ) then
       archer.x = archer.x - dt * const.archer.speed
@@ -114,25 +118,37 @@ function love.update(dt)
       table.insert(arrow_list, new_arrow)
    end
 
+   -- archer falling
+   archer.vy = archer.vy + const.phys.grav * dt
+
+
+   archer.y = archer.y + archer.vy * dt
+
+   local archer_hitbox = {
+      x1 = archer.x + const.archer.hitbox.x1,
+      y1 = archer.y + const.archer.hitbox.y1,
+      x2 = archer.x + const.archer.hitbox.x2,
+      y2 = archer.y + const.archer.hitbox.y2
+   }
    -- ground detection
    for i, tile in ipairs(map.data) do
       local x = tile.x * const.map.img_width
       local y = tile.y * const.map.img_height
-      if archer.x >= x and archer.y >= y and 
-         archer.x < x + const.map.img_width and archer.y < y + const.map.img_height then
+      local tile_hitbox = {
+         x1 = x, y1 = y,
+         x2 = x + const.map.img_width,
+         y2 = y + const.map.img_height
+      }
+      if collisionAABB(tile_hitbox, archer_hitbox) then
          archer.vy = 0
-         archer.y = y
+         archer.x = prev.x
+         archer.y = prev.y         
          break
       end
      
    end
 
 
-   -- archer falling
-   archer.vy = archer.vy + const.phys.grav * dt
-
-
-   archer.y = archer.y + archer.vy * dt
 
    -- arrow
    for i,arrow in ipairs(arrow_list) do
@@ -184,5 +200,9 @@ function love.draw()
 
 end
 
-
+function collisionAABB(a, b)
+   return a.x1 < b.x2 and a.x2 > b.x1 and
+          a.y1 < b.y2 and a.y2 > b.y1
+           
+end
 
