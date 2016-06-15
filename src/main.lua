@@ -48,7 +48,11 @@ function love.load()
       y = 200,
       vy = 0,
       facing = "right",
-      onGround = false
+      onGround = false,
+      bow = {
+         chargingTime = 0,
+         isPulling = false 
+      }
    }
    
 
@@ -95,7 +99,29 @@ function toMap(width, data)
    return out
 end
 
+function love.keypressed(key)
+   if key == const.key.shoot then
+      archer.bow.isPulling = true
+      archer.bow.chargingTime = 0
+   end
 
+end
+
+function love.keyreleased(key)
+   if key == const.key.shoot then
+      archer.bow.isPulling = false
+      if archer.bow.chargingTime > 1 then archer.bow.chargingTime = 1 end
+      new_arrow = { 
+         img = images.arrow, 
+         x = archer.x + const.archer.arrow_offset.x,
+         y = archer.y + const.archer.arrow_offset.y,
+         facing = archer.facing,
+         vy = 0,
+         vx = const.arrow.speed * (1 + archer.bow.chargingTime)
+      }
+      table.insert(arrow_list, new_arrow)
+   end
+end
 
 function love.update(dt)
    local prev = {
@@ -113,15 +139,6 @@ function love.update(dt)
    end
    if love.keyboard.isDown( const.key.jump ) and archer.onGround then
       archer.vy = const.archer.jumpvel
-   end
-   if love.keyboard.isDown( const.key.shoot ) then
-      new_arrow = { 
-         img = images.arrow, 
-         x = archer.x + const.archer.arrow_offset.x,
-         y = archer.y + const.archer.arrow_offset.y,
-         facing = archer.facing
-      }
-      table.insert(arrow_list, new_arrow)
    end
 
 
@@ -198,11 +215,17 @@ function love.update(dt)
 
    -- arrow
    for i,arrow in ipairs(arrow_list) do
+      arrow.vy = arrow.vy + const.phys.grav * dt
+      arrow.y = arrow.y + arrow.vy * dt
       if arrow.facing == "right" then
-         arrow.x = arrow.x + dt * const.arrow.speed
+         arrow.x = arrow.x + arrow.vx * dt 
       else
-         arrow.x = arrow.x - dt * const.arrow.speed
+         arrow.x = arrow.x - arrow.vx * dt 
       end
+   end
+
+   if archer.bow.isPulling then
+      archer.bow.chargingTime = archer.bow.chargingTime + dt
    end
 end
 
