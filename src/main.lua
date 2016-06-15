@@ -7,7 +7,7 @@ function love.load()
       key = {
          left  = "a",
          right = "d",
-         shoot = "rctrl",
+         shoot = "v",
          jump  = "w"
       },
       archer = { 
@@ -124,6 +124,38 @@ function love.update(dt)
       table.insert(arrow_list, new_arrow)
    end
 
+
+   local archer_hitbox = {
+      x1 = archer.x + const.archer.hitbox.x1,
+      y1 = archer.y + const.archer.hitbox.y1,
+      x2 = archer.x + const.archer.hitbox.x2,
+      y2 = archer.y + const.archer.hitbox.y2
+   }
+   local archer_center = center(archer_hitbox)
+   archer.onGround = false
+   -- ground detection
+   for i, tile in ipairs(map.data) do
+      local x = tile.x * const.map.img_width
+      local y = tile.y * const.map.img_height
+      local tile_hitbox = {
+         x1 = x, y1 = y,
+         x2 = x + const.map.img_width,
+         y2 = y + const.map.img_height
+      }
+      if collisionAABB(tile_hitbox, archer_hitbox) then
+         local intbox = intersection(tile_hitbox, archer_hitbox)
+         local intbox_center = center(intbox)
+         if archer_hitbox.x2 - intbox.x1 < 10 then
+            archer.x = tile_hitbox.x1 - const.archer.hitbox.x2
+         elseif intbox.x2 - archer_hitbox.x1 < 10 then
+            archer.x = tile_hitbox.x2 - const.archer.hitbox.x1
+         end
+
+      end
+     
+   end
+
+
    -- archer falling
    archer.vy = archer.vy + const.phys.grav * dt
 
@@ -154,10 +186,6 @@ function love.update(dt)
             archer.vy = 0
             archer.y = tile_hitbox.y1 - const.archer.hitbox.y2
             archer.onGround = true
-         elseif archer_hitbox.x2 - intbox.x1 < 10 then
-            archer.x = tile_hitbox.x1 - const.archer.hitbox.x2
-         elseif intbox.x2 - archer_hitbox.x1 < 10 then
-            archer.x = tile_hitbox.x2 - const.archer.hitbox.x1
          elseif intbox.y2 - archer_hitbox.y1 < 10 then
             archer.vy = 0
             archer.y = tile_hitbox.y2 - const.archer.hitbox.y1
@@ -166,7 +194,6 @@ function love.update(dt)
       end
      
    end
-
 
 
    -- arrow
@@ -191,12 +218,12 @@ function love.draw()
    end
 
    -- Draw Archer Hitbox
-   love.graphics.line(
-      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1,
-      archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y1,
-      archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y2,
-      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y2,
-      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1)
+   --love.graphics.line(
+   --   archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1,
+   --   archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y1,
+   --   archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y2,
+   --   archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y2,
+   --   archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1)
 
    -- Arrows
    for i,arrow in ipairs(arrow_list) do
