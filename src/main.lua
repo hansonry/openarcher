@@ -30,7 +30,8 @@ function love.load()
             y1 = 0,
             x2 = 18,
             y2 = 3
-         }
+         },
+         stuckTimeout = 5 -- Seconds
       },
       map = {
          img_width  = 35,
@@ -113,16 +114,22 @@ end
 
 function love.keyreleased(key)
    if key == const.key.shoot then
-      archer.bow.isPulling = false
+      archer.bow.isPulling = false      
       if archer.bow.chargingTime > 1 then archer.bow.chargingTime = 1 end
+      local speed
+      if archer.facing == "right" then
+         speed = const.arrow.speed * (1 + archer.bow.chargingTime)
+      else
+         speed = -const.arrow.speed * (1 + archer.bow.chargingTime)
+      end
       new_arrow = { 
          img = images.arrow, 
          x = archer.x + const.archer.arrow_offset.x,
          y = archer.y + const.archer.arrow_offset.y,
-         facing = archer.facing,
          vy = 0,
-         vx = const.arrow.speed * (1 + archer.bow.chargingTime),
-         state = "flying"
+         vx = speed,
+         state = "flying",
+         stuckTime = 0
       }
       table.insert(arrow_list, new_arrow)
    end
@@ -219,23 +226,43 @@ function love.update(dt)
 
 
    -- arrow
-   for i,arrow in ipairs(arrow_list) do
-      if arrow.state == "flying" then
-
-         arrow.vy = arrow.vy + const.phys.grav * dt
-         arrow.y = arrow.y + arrow.vy * dt
-
-         if arrow.facing == "right" then
-            arrow.x = arrow.x + arrow.vx * dt 
-         else
-            arrow.x = arrow.x - arrow.vx * dt 
-         end
-         local arrow_hitbox = {
+   for i = #arrow_list, 1, -1 do -- Loop Backwards for the removal
+      local arrow = arrow_list[i]
+      local arrow_hitbox
+      if arrow.state == "flying" or 
+         arrow.state == "stuck" then
+         arrow_hitbox = {
             x1 = arrow.x + const.arrow.hitbox.x1,
             y1 = arrow.y + const.arrow.hitbox.y1,
             x2 = arrow.x + const.arrow.hitbox.x2,
             y2 = arrow.y + const.arrow.hitbox.y2
          }
+      else
+         arrow_hitbox = {
+            x1 = arrow.x + const.arrow.hitbox.x1,
+            y1 = arrow.y + const.arrow.hitbox.y1,
+            x2 = arrow.x + const.arrow.hitbox.y2,
+            y2 = arrow.y + const.arrow.hitbox.x2 
+         } -- Flipped becuase the arrow is pointing down
+      end
+
+      if arrow.state == "flying" or
+         arrow.state == "falling" then
+         arrow.vy = arrow.vy + const.phys.grav * dt
+         arrow.y = arrow.y + arrow.vy * dt
+         arrow.x = arrow.x + arrow.vx * dt
+
+      end
+
+      if arrow.state == "stuck" or 
+         arrow.state == "fallen" then
+         if collisionAABB(arrow_hitbox, archer_hitbox) then
+            table.remove(arrow_list, i)
+         end
+      end
+
+      if arrow.state == "flying" then
+
          for i, tile in ipairs(map.data) do
             local x = tile.x * const.map.img_width
             local y = tile.y * const.map.img_height
@@ -246,19 +273,52 @@ function love.update(dt)
             }
             if collisionAABB(tile_hitbox, arrow_hitbox) then
                arrow.state = "stuck"
-            
+               arrow.stuckTime = 0 
+               if arrow.vx > 0 then
+                  arrow.x = tile_hitbox.x1 - const.arrow.img_width + 5
+               else
+                  arrow.x = tile_hitbox.x2 - 5
+               end
                break;
-
             end
      
+         end
+      elseif arrow.state == "stuck" then
+         arrow.stuckTime = arrow.stuckTime + dt
+         if arrow.stuckTime >= const.arrow.stuckTimeout then
+
+            if arrow.vx < 0 then
+               -- Shift the arrow over
+               arrow.x = arrow.x + const.arrow.img_width
+            end
+            arrow.state = "falling"
+            arrow.vx = 0
+            arrow.vy = 0
+            
+         end 
+      elseif arrow.state == "falling" then         
+         for i, tile in ipairs(map.data) do
+            local x = tile.x * const.map.img_width
+            local y = tile.y * const.map.img_height
+            local tile_hitbox = {
+               x1 = x, y1 = y,
+               x2 = x + const.map.img_width,
+               y2 = y + const.map.img_height
+            }
+            if collisionAABB(tile_hitbox, arrow_hitbox) then
+               arrow.state = "fallen"
+               break;
+            end
          end
       end
 
    end
 
+   -- Bow
    if archer.bow.isPulling then
       archer.bow.chargingTime = archer.bow.chargingTime + dt
    end
+
 end
 
 function love.draw()
@@ -284,7 +344,11 @@ function love.draw()
 
    -- Arrows
    for i,arrow in ipairs(arrow_list) do
-     if arrow.facing == "right" then
+      if arrow.state == "falling" or 
+         arrow.state == "fallen" then
+         love.graphics.draw(arrow.img, arrow.x, arrow.y, math.rad(90), 1, 1, 0, 0)
+
+      elseif arrow.vx > 0 then
          love.graphics.draw(arrow.img, arrow.x, arrow.y)
       else
          -- Flip the archer. This also changes it's x pos
@@ -299,6 +363,7 @@ function love.draw()
          arrow.x + const.arrow.hitbox.x1, arrow.y + const.arrow.hitbox.y2,
          arrow.x + const.arrow.hitbox.x1, arrow.y + const.arrow.hitbox.y1)
       --]]
+      
 
    end
 
