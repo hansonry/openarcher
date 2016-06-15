@@ -24,7 +24,13 @@ function love.load()
       },
       arrow = { 
          speed     = 200, 
-         img_width = 18 
+         img_width = 18,
+         hitbox = {
+            x1 = 0,
+            y1 = 0,
+            x2 = 18,
+            y2 = 3
+         }
       },
       map = {
          img_width  = 35,
@@ -56,9 +62,7 @@ function love.load()
    }
    
 
-   arrow_list = {
-      --{ img = arrow_img, x = 300, y = 200, facing = "right" }
-   }
+   arrow_list = {}
 
    map = {
       data = toMap(10, {
@@ -117,7 +121,8 @@ function love.keyreleased(key)
          y = archer.y + const.archer.arrow_offset.y,
          facing = archer.facing,
          vy = 0,
-         vx = const.arrow.speed * (1 + archer.bow.chargingTime)
+         vx = const.arrow.speed * (1 + archer.bow.chargingTime),
+         state = "flying"
       }
       table.insert(arrow_list, new_arrow)
    end
@@ -198,7 +203,7 @@ function love.update(dt)
       }
       if collisionAABB(tile_hitbox, archer_hitbox) then
          local intbox = intersection(tile_hitbox, archer_hitbox)
-         local intbox_center = center(intbox)
+         --local intbox_center = center(intbox)
          if archer_hitbox.y2 - intbox.y1 < 10 then
             archer.vy = 0
             archer.y = tile_hitbox.y1 - const.archer.hitbox.y2
@@ -215,13 +220,40 @@ function love.update(dt)
 
    -- arrow
    for i,arrow in ipairs(arrow_list) do
-      arrow.vy = arrow.vy + const.phys.grav * dt
-      arrow.y = arrow.y + arrow.vy * dt
-      if arrow.facing == "right" then
-         arrow.x = arrow.x + arrow.vx * dt 
-      else
-         arrow.x = arrow.x - arrow.vx * dt 
+      if arrow.state == "flying" then
+
+         arrow.vy = arrow.vy + const.phys.grav * dt
+         arrow.y = arrow.y + arrow.vy * dt
+
+         if arrow.facing == "right" then
+            arrow.x = arrow.x + arrow.vx * dt 
+         else
+            arrow.x = arrow.x - arrow.vx * dt 
+         end
+         local arrow_hitbox = {
+            x1 = arrow.x + const.arrow.hitbox.x1,
+            y1 = arrow.y + const.arrow.hitbox.y1,
+            x2 = arrow.x + const.arrow.hitbox.x2,
+            y2 = arrow.y + const.arrow.hitbox.y2
+         }
+         for i, tile in ipairs(map.data) do
+            local x = tile.x * const.map.img_width
+            local y = tile.y * const.map.img_height
+            local tile_hitbox = {
+               x1 = x, y1 = y,
+               x2 = x + const.map.img_width,
+               y2 = y + const.map.img_height
+            }
+            if collisionAABB(tile_hitbox, arrow_hitbox) then
+               arrow.state = "stuck"
+            
+               break;
+
+            end
+     
+         end
       end
+
    end
 
    if archer.bow.isPulling then
@@ -241,12 +273,14 @@ function love.draw()
    end
 
    -- Draw Archer Hitbox
-   --love.graphics.line(
-   --   archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1,
-   --   archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y1,
-   --   archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y2,
-   --   archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y2,
-   --   archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1)
+   --[[
+   love.graphics.line(
+      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1,
+      archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y1,
+      archer.x + const.archer.hitbox.x2, archer.y + const.archer.hitbox.y2,
+      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y2,
+      archer.x + const.archer.hitbox.x1, archer.y + const.archer.hitbox.y1)
+   --]]
 
    -- Arrows
    for i,arrow in ipairs(arrow_list) do
@@ -256,6 +290,16 @@ function love.draw()
          -- Flip the archer. This also changes it's x pos
          love.graphics.draw(arrow.img, arrow.x + const.arrow.img_width, arrow.y, 0, -1, 1)
       end
+      -- Arrow Hitbox
+      --[[
+      love.graphics.line(
+         arrow.x + const.arrow.hitbox.x1, arrow.y + const.arrow.hitbox.y1,
+         arrow.x + const.arrow.hitbox.x2, arrow.y + const.arrow.hitbox.y1,
+         arrow.x + const.arrow.hitbox.x2, arrow.y + const.arrow.hitbox.y2,
+         arrow.x + const.arrow.hitbox.x1, arrow.y + const.arrow.hitbox.y2,
+         arrow.x + const.arrow.hitbox.x1, arrow.y + const.arrow.hitbox.y1)
+      --]]
+
    end
 
    --love.graphics.draw(images.platform, 10, 10);
