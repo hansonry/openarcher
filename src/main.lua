@@ -7,7 +7,8 @@ function love.load()
       key = {
          left  = "a",
          right = "d",
-         shoot = "rctrl"
+         shoot = "rctrl",
+         jump  = "w"
       },
       archer = { 
          speed        = 100, 
@@ -18,7 +19,8 @@ function love.load()
             y1 = 4,
             x2 = 6 + 18,
             y2 = 4 + 62,
-         }
+         },
+         jumpvel = -125
       },
       arrow = { 
          speed     = 200, 
@@ -31,7 +33,7 @@ function love.load()
       phys = {
          grav = 100
       }
-   }
+   } -- Const
    images = {
       arrow    = love.graphics.newImage("assets/arrow2.png"),
       archer   = love.graphics.newImage("assets/archer.png"),
@@ -45,7 +47,8 @@ function love.load()
       x = 200,
       y = 200,
       vy = 0,
-      facing = "right"
+      facing = "right",
+      onGround = false
    }
    
 
@@ -108,6 +111,9 @@ function love.update(dt)
       archer.x = archer.x + dt * const.archer.speed
       archer.facing = "right"
    end
+   if love.keyboard.isDown( const.key.jump ) and archer.onGround then
+      archer.vy = const.archer.jumpvel
+   end
    if love.keyboard.isDown( const.key.shoot ) then
       new_arrow = { 
          img = images.arrow, 
@@ -130,6 +136,8 @@ function love.update(dt)
       x2 = archer.x + const.archer.hitbox.x2,
       y2 = archer.y + const.archer.hitbox.y2
    }
+   local archer_center = center(archer_hitbox)
+   archer.onGround = false
    -- ground detection
    for i, tile in ipairs(map.data) do
       local x = tile.x * const.map.img_width
@@ -140,10 +148,21 @@ function love.update(dt)
          y2 = y + const.map.img_height
       }
       if collisionAABB(tile_hitbox, archer_hitbox) then
-         archer.vy = 0
-         archer.x = prev.x
-         archer.y = prev.y         
-         break
+         local intbox = intersection(tile_hitbox, archer_hitbox)
+         local intbox_center = center(intbox)
+         if archer_hitbox.y2 - intbox.y1 < 10 then
+            archer.vy = 0
+            archer.y = tile_hitbox.y1 - const.archer.hitbox.y2
+            archer.onGround = true
+         elseif archer_hitbox.x2 - intbox.x1 < 10 then
+            archer.x = tile_hitbox.x1 - const.archer.hitbox.x2
+         elseif intbox.x2 - archer_hitbox.x1 < 10 then
+            archer.x = tile_hitbox.x2 - const.archer.hitbox.x1
+         elseif intbox.y2 - archer_hitbox.y1 < 10 then
+            archer.vy = 0
+            archer.y = tile_hitbox.y2 - const.archer.hitbox.y1
+         end
+
       end
      
    end
@@ -205,4 +224,19 @@ function collisionAABB(a, b)
           a.y1 < b.y2 and a.y2 > b.y1
            
 end
+
+function intersection(a, b)
+   local intbox = {}
+   if a.x1 > b.x1 then intbox.x1 = a.x1 else intbox.x1 = b.x1 end
+   if a.y1 > b.y1 then intbox.y1 = a.y1 else intbox.y1 = b.y1 end
+   if a.x2 > b.x2 then intbox.x2 = b.x2 else intbox.x2 = a.x2 end
+   if a.y2 > b.y2 then intbox.y2 = b.y2 else intbox.y2 = a.y2 end
+
+   return intbox
+end
+
+function center(a)
+   return { x = (a.x1 + a.x2) / 2, y = (a.y1 + a.y2) / 2}
+end
+
 
