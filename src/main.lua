@@ -79,7 +79,8 @@ function love.load()
             jump  = const.key.player1.jump,
             shoot = const.key.player1.shoot
          },
-         hits = 0
+         hits = 0,
+         arrows = 3
       },
       {
          img = images.archer2,
@@ -98,7 +99,8 @@ function love.load()
             jump  = const.key.player2.jump,
             shoot = const.key.player2.shoot
          },
-         hits = 0
+         hits = 0,
+         arrows = 3
       }
    }
    
@@ -156,7 +158,7 @@ end
 
 function love.keyreleased(key)
    for i,archer in ipairs(archer_list) do
-      if key == archer.key.shoot then
+      if key == archer.key.shoot  and archer.arrows > 0 then
          archer.bow.isPulling = false      
          if archer.bow.chargingTime > 1 then archer.bow.chargingTime = 1 end
          local speed
@@ -176,6 +178,7 @@ function love.keyreleased(key)
             previousVictim = archer
          }
          table.insert(arrow_list, new_arrow)
+         archer.arrows = archer.arrows - 1
       end
    end
 end
@@ -292,6 +295,7 @@ function love.update(dt)
             arrow.state == "fallen" then
             if collisionAABB(arrow_hitbox, archer_hitbox) then
                table.remove(arrow_list, i)
+               archer.arrows = archer.arrows + 1
             end
          else
             if collisionAABB(arrow_hitbox, archer_hitbox) and
@@ -404,6 +408,7 @@ function love.draw()
          love.graphics.draw(archer.img, archer.x + const.archer.img_width, archer.y, 0, -1, 1)
       end
       love.graphics.print(archer.hits, i * 20, 400)
+      love.graphics.print(archer.arrows, i * 20, 415)
    end
 
    -- Draw Archer Hitbox
