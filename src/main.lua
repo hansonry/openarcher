@@ -5,10 +5,18 @@ function love.load()
 
    const = {
       key = {
-         left  = "a",
-         right = "d",
-         shoot = "v",
-         jump  = "w"
+         player1 = {
+            left  = "a",
+            right = "d",
+            jump  = "w",
+            shoot = "v"
+         },
+         player2 = {
+            left  = "j",
+            right = "l",
+            jump  = "i",
+            shoot = "/"
+         },
       },
       archer = { 
          speed        = 100, 
@@ -31,7 +39,11 @@ function love.load()
             x2 = 18,
             y2 = 3
          },
-         stuckTimeout = 5 -- Seconds
+         stuck = {
+            timeout = 5, -- Seconds
+            wallPen = 5
+         }
+         
       },
       map = {
          img_width  = 35,
@@ -48,17 +60,24 @@ function love.load()
    }
 
 
-
-   archer = {
-      img = images.archer,
-      x = 200,
-      y = 200,
-      vy = 0,
-      facing = "right",
-      onGround = false,
-      bow = {
-         chargingTime = 0,
-         isPulling = false 
+   archer_list = {
+      {
+         img = images.archer,
+         x = 200,
+         y = 200,
+         vy = 0,
+         facing = "right",
+         onGround = false,
+         bow = {
+            chargingTime = 0,
+            isPulling = false 
+         },
+         key = {
+            left  = const.key.player1.left,
+            right = const.key.player1.right,
+            jump  = const.key.player1.jump,
+            shoot = const.key.player1.shoot
+         }
       }
    }
    
@@ -105,129 +124,161 @@ function toMap(width, data)
 end
 
 function love.keypressed(key)
-   if key == const.key.shoot then
-      archer.bow.isPulling = true
-      archer.bow.chargingTime = 0
+   for i,archer in ipairs(archer_list) do
+      if key == archer.key.shoot then
+         archer.bow.isPulling = true
+         archer.bow.chargingTime = 0
+      end
    end
 
 end
 
 function love.keyreleased(key)
-   if key == const.key.shoot then
-      archer.bow.isPulling = false      
-      if archer.bow.chargingTime > 1 then archer.bow.chargingTime = 1 end
-      local speed
-      if archer.facing == "right" then
-         speed = const.arrow.speed * (1 + archer.bow.chargingTime)
-      else
-         speed = -const.arrow.speed * (1 + archer.bow.chargingTime)
+   for i,archer in ipairs(archer_list) do
+      if key == archer.key.shoot then
+         archer.bow.isPulling = false      
+         if archer.bow.chargingTime > 1 then archer.bow.chargingTime = 1 end
+         local speed
+         if archer.facing == "right" then
+            speed = const.arrow.speed * (1 + archer.bow.chargingTime)
+         else
+            speed = -const.arrow.speed * (1 + archer.bow.chargingTime)
+         end
+         new_arrow = { 
+            img = images.arrow, 
+            x = archer.x + const.archer.arrow_offset.x,
+            y = archer.y + const.archer.arrow_offset.y,
+            vy = 0,
+            vx = speed,
+            state = "flying",
+            stuckTime = 0
+         }
+         table.insert(arrow_list, new_arrow)
       end
-      new_arrow = { 
-         img = images.arrow, 
-         x = archer.x + const.archer.arrow_offset.x,
-         y = archer.y + const.archer.arrow_offset.y,
-         vy = 0,
-         vx = speed,
-         state = "flying",
-         stuckTime = 0
-      }
-      table.insert(arrow_list, new_arrow)
    end
 end
 
 function love.update(dt)
-   local prev = {
-      x = archer.x,
-      y = archer.y
-   }
    -- archer
-   if love.keyboard.isDown( const.key.left ) then
-      archer.x = archer.x - dt * const.archer.speed
-      archer.facing = "left"
-   end
-   if love.keyboard.isDown( const.key.right ) then
-      archer.x = archer.x + dt * const.archer.speed
-      archer.facing = "right"
-   end
-   if love.keyboard.isDown( const.key.jump ) and archer.onGround then
-      archer.vy = const.archer.jumpvel
-   end
+   for i,archer in ipairs(archer_list) do
+      if love.keyboard.isDown( archer.key.left ) then
+         archer.x = archer.x - dt * const.archer.speed
+         archer.facing = "left"
+      end
+      if love.keyboard.isDown( archer.key.right ) then
+         archer.x = archer.x + dt * const.archer.speed
+         archer.facing = "right"
+      end
+      if love.keyboard.isDown( archer.key.jump ) and archer.onGround then
+         archer.vy = const.archer.jumpvel
+      end
 
 
-   local archer_hitbox = {
-      x1 = archer.x + const.archer.hitbox.x1,
-      y1 = archer.y + const.archer.hitbox.y1,
-      x2 = archer.x + const.archer.hitbox.x2,
-      y2 = archer.y + const.archer.hitbox.y2
-   }
-   local archer_center = center(archer_hitbox)
-   archer.onGround = false
-   -- ground detection
-   for i, tile in ipairs(map.data) do
-      local x = tile.x * const.map.img_width
-      local y = tile.y * const.map.img_height
-      local tile_hitbox = {
-         x1 = x, y1 = y,
-         x2 = x + const.map.img_width,
-         y2 = y + const.map.img_height
+      local archer_hitbox = {
+         x1 = archer.x + const.archer.hitbox.x1,
+         y1 = archer.y + const.archer.hitbox.y1,
+         x2 = archer.x + const.archer.hitbox.x2,
+         y2 = archer.y + const.archer.hitbox.y2
       }
-      if collisionAABB(tile_hitbox, archer_hitbox) then
-         local intbox = intersection(tile_hitbox, archer_hitbox)
-         local intbox_center = center(intbox)
-         if archer_hitbox.x2 - intbox.x1 < 10 then
-            archer.x = tile_hitbox.x1 - const.archer.hitbox.x2
-         elseif intbox.x2 - archer_hitbox.x1 < 10 then
-            archer.x = tile_hitbox.x2 - const.archer.hitbox.x1
+      local archer_center = center(archer_hitbox)
+      archer.onGround = false
+      -- ground detection
+      for i, tile in ipairs(map.data) do
+         local x = tile.x * const.map.img_width
+         local y = tile.y * const.map.img_height
+         local tile_hitbox = {
+            x1 = x, y1 = y,
+            x2 = x + const.map.img_width,
+            y2 = y + const.map.img_height
+         }
+         if collisionAABB(tile_hitbox, archer_hitbox) then
+            local intbox = intersection(tile_hitbox, archer_hitbox)
+            local intbox_center = center(intbox)
+            if archer_hitbox.x2 - intbox.x1 < 10 then
+               archer.x = tile_hitbox.x1 - const.archer.hitbox.x2
+            elseif intbox.x2 - archer_hitbox.x1 < 10 then
+               archer.x = tile_hitbox.x2 - const.archer.hitbox.x1
+            end
+
+         end
+        
+      end
+
+
+      -- archer falling
+      archer.vy = archer.vy + const.phys.grav * dt
+
+
+      archer.y = archer.y + archer.vy * dt
+
+      local archer_hitbox = {
+         x1 = archer.x + const.archer.hitbox.x1,
+         y1 = archer.y + const.archer.hitbox.y1,
+         x2 = archer.x + const.archer.hitbox.x2,
+         y2 = archer.y + const.archer.hitbox.y2
+      }
+      local archer_center = center(archer_hitbox)
+      archer.onGround = false
+      -- ground detection
+      for i, tile in ipairs(map.data) do
+         local x = tile.x * const.map.img_width
+         local y = tile.y * const.map.img_height
+         local tile_hitbox = {
+            x1 = x, y1 = y,
+            x2 = x + const.map.img_width,
+            y2 = y + const.map.img_height
+         }
+         if collisionAABB(tile_hitbox, archer_hitbox) then
+            local intbox = intersection(tile_hitbox, archer_hitbox)
+            --local intbox_center = center(intbox)
+            if archer_hitbox.y2 - intbox.y1 < 10 then
+               archer.vy = 0
+               archer.y = tile_hitbox.y1 - const.archer.hitbox.y2
+               archer.onGround = true
+            elseif intbox.y2 - archer_hitbox.y1 < 10 then
+               archer.vy = 0
+               archer.y = tile_hitbox.y2 - const.archer.hitbox.y1
+            end
+
+         end
+        
+      end
+      -- Bow
+      if archer.bow.isPulling then
+         archer.bow.chargingTime = archer.bow.chargingTime + dt
+      end
+      -- Arrow Hit detection
+      for i = #arrow_list, 1, -1 do
+         local arrow = arrow_list[i]
+         if arrow.state == "flying" or 
+            arrow.state == "stuck" then
+            arrow_hitbox = {
+               x1 = arrow.x + const.arrow.hitbox.x1,
+               y1 = arrow.y + const.arrow.hitbox.y1,
+               x2 = arrow.x + const.arrow.hitbox.x2,
+               y2 = arrow.y + const.arrow.hitbox.y2
+            }
+         else
+            arrow_hitbox = {
+               x1 = arrow.x + const.arrow.hitbox.x1,
+               y1 = arrow.y + const.arrow.hitbox.y1,
+               x2 = arrow.x + const.arrow.hitbox.y2,
+               y2 = arrow.y + const.arrow.hitbox.x2 
+            } -- Flipped becuase the arrow is pointing down
+         end
+         if arrow.state == "stuck" or 
+            arrow.state == "fallen" then
+            if collisionAABB(arrow_hitbox, archer_hitbox) then
+               table.remove(arrow_list, i)
+            end
          end
 
       end
-     
+
    end
-
-
-   -- archer falling
-   archer.vy = archer.vy + const.phys.grav * dt
-
-
-   archer.y = archer.y + archer.vy * dt
-
-   local archer_hitbox = {
-      x1 = archer.x + const.archer.hitbox.x1,
-      y1 = archer.y + const.archer.hitbox.y1,
-      x2 = archer.x + const.archer.hitbox.x2,
-      y2 = archer.y + const.archer.hitbox.y2
-   }
-   local archer_center = center(archer_hitbox)
-   archer.onGround = false
-   -- ground detection
-   for i, tile in ipairs(map.data) do
-      local x = tile.x * const.map.img_width
-      local y = tile.y * const.map.img_height
-      local tile_hitbox = {
-         x1 = x, y1 = y,
-         x2 = x + const.map.img_width,
-         y2 = y + const.map.img_height
-      }
-      if collisionAABB(tile_hitbox, archer_hitbox) then
-         local intbox = intersection(tile_hitbox, archer_hitbox)
-         --local intbox_center = center(intbox)
-         if archer_hitbox.y2 - intbox.y1 < 10 then
-            archer.vy = 0
-            archer.y = tile_hitbox.y1 - const.archer.hitbox.y2
-            archer.onGround = true
-         elseif intbox.y2 - archer_hitbox.y1 < 10 then
-            archer.vy = 0
-            archer.y = tile_hitbox.y2 - const.archer.hitbox.y1
-         end
-
-      end
-     
-   end
-
 
    -- arrow
-   for i = #arrow_list, 1, -1 do -- Loop Backwards for the removal
-      local arrow = arrow_list[i]
+   for i,arrow in ipairs(arrow_list) do 
       local arrow_hitbox
       if arrow.state == "flying" or 
          arrow.state == "stuck" then
@@ -254,12 +305,6 @@ function love.update(dt)
 
       end
 
-      if arrow.state == "stuck" or 
-         arrow.state == "fallen" then
-         if collisionAABB(arrow_hitbox, archer_hitbox) then
-            table.remove(arrow_list, i)
-         end
-      end
 
       if arrow.state == "flying" then
 
@@ -275,9 +320,9 @@ function love.update(dt)
                arrow.state = "stuck"
                arrow.stuckTime = 0 
                if arrow.vx > 0 then
-                  arrow.x = tile_hitbox.x1 - const.arrow.img_width + 5
+                  arrow.x = tile_hitbox.x1 - const.arrow.img_width + const.arrow.stuck.wallPen
                else
-                  arrow.x = tile_hitbox.x2 - 5
+                  arrow.x = tile_hitbox.x2 - const.arrow.stuck.wallPen
                end
                break;
             end
@@ -285,7 +330,7 @@ function love.update(dt)
          end
       elseif arrow.state == "stuck" then
          arrow.stuckTime = arrow.stuckTime + dt
-         if arrow.stuckTime >= const.arrow.stuckTimeout then
+         if arrow.stuckTime >= const.arrow.stuck.timeout then
 
             if arrow.vx < 0 then
                -- Shift the arrow over
@@ -314,10 +359,6 @@ function love.update(dt)
 
    end
 
-   -- Bow
-   if archer.bow.isPulling then
-      archer.bow.chargingTime = archer.bow.chargingTime + dt
-   end
 
 end
 
@@ -325,11 +366,13 @@ function love.draw()
    --love.graphics.print("Hello World!", 400, 300)
 
    -- Draw Archer
-   if archer.facing == "right" then
-      love.graphics.draw(archer.img, archer.x, archer.y)
-   else
-      -- Flip the archer. This also changes it's x pos
-      love.graphics.draw(archer.img, archer.x + const.archer.img_width, archer.y, 0, -1, 1)
+   for i,archer in ipairs(archer_list) do
+      if archer.facing == "right" then
+         love.graphics.draw(archer.img, archer.x, archer.y)
+      else
+         -- Flip the archer. This also changes it's x pos
+         love.graphics.draw(archer.img, archer.x + const.archer.img_width, archer.y, 0, -1, 1)
+      end
    end
 
    -- Draw Archer Hitbox
