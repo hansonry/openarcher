@@ -78,7 +78,8 @@ function love.load()
             right = const.key.player1.right,
             jump  = const.key.player1.jump,
             shoot = const.key.player1.shoot
-         }
+         },
+         hits = 0
       },
       {
          img = images.archer2,
@@ -96,7 +97,8 @@ function love.load()
             right = const.key.player2.right,
             jump  = const.key.player2.jump,
             shoot = const.key.player2.shoot
-         }
+         },
+         hits = 0
       }
    }
    
@@ -167,10 +169,11 @@ function love.keyreleased(key)
             img = images.arrow, 
             x = archer.x + const.archer.arrow_offset.x,
             y = archer.y + const.archer.arrow_offset.y,
-            vy = 0,
+            vy = archer.vy,
             vx = speed,
             state = "flying",
-            stuckTime = 0
+            stuckTime = 0,
+            previousVictim = archer
          }
          table.insert(arrow_list, new_arrow)
       end
@@ -290,6 +293,13 @@ function love.update(dt)
             if collisionAABB(arrow_hitbox, archer_hitbox) then
                table.remove(arrow_list, i)
             end
+         else
+            if collisionAABB(arrow_hitbox, archer_hitbox) and
+               arrow.previousVictim ~= archer then
+               -- hit
+               arrow.previousVictim = archer
+               archer.hits = archer.hits + 1
+            end
          end
 
       end
@@ -337,6 +347,7 @@ function love.update(dt)
             }
             if collisionAABB(tile_hitbox, arrow_hitbox) then
                arrow.state = "stuck"
+               arrow.previousVictim = nil
                arrow.stuckTime = 0 
                if arrow.vx > 0 then
                   arrow.x = tile_hitbox.x1 - const.arrow.img_width + const.arrow.stuck.wallPen
@@ -392,6 +403,7 @@ function love.draw()
          -- Flip the archer. This also changes it's x pos
          love.graphics.draw(archer.img, archer.x + const.archer.img_width, archer.y, 0, -1, 1)
       end
+      love.graphics.print(archer.hits, i * 20, 400)
    end
 
    -- Draw Archer Hitbox
