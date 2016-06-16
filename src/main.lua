@@ -61,11 +61,34 @@ function love.load()
    } -- images
 
 
+   map = {
+      data = toMap(10, {
+         1, 1, 1, 1 ,1, 1, 1, 1, 1 ,1,
+         1, 0, 0, 0, 1, 1, 1, 1, 1 ,1,
+         1, 0, 0, 0, 1, 1, 1, 1, 1 ,1,
+         1, 0, 0, 1, 1, 1, 1, 1, 1 ,1,
+         1, 0, 0, 1 ,1, 1, 1, 1, 1 ,1,
+         1, 0, 0, 0 ,0, 0, 0, 0, 0 ,1,
+         1, 0, 0, 0 ,0, 0, 0, 0, 0 ,1,
+         1, 0, 0, 1 ,1, 0, 0, 0, 0 ,1,
+         1, 0, 0, 0 ,0, 0, 0, 0, 0 ,1,
+         1, 1, 1, 1 ,1, 1, 1, 1, 1 ,1,
+      }),
+      start1 = {
+         x = 40,
+         y = 40
+      },
+      start2 = {
+         x = 200,
+         y = 200
+      }
+   } -- Map
+
    archer_list = {
       {
          img = images.archer,
-         x = 200,
-         y = 200,
+         x = 0,
+         y = 0,
          vy = 0,
          facing = "right",
          onGround = false,
@@ -80,12 +103,13 @@ function love.load()
             shoot = const.key.player1.shoot
          },
          hits = 0,
-         arrows = 3
+         arrows = 3,
+         wins = 0
       },
       {
          img = images.archer2,
-         x = 200,
-         y = 200,
+         x = 0,
+         y = 0,
          vy = 0,
          facing = "right",
          onGround = false,
@@ -100,27 +124,31 @@ function love.load()
             shoot = const.key.player2.shoot
          },
          hits = 0,
-         arrows = 3
+         arrows = 3,
+         wins = 0,
+         isAlive = true
       }
    } -- Archer List
    
+   newRound()
+   
+end
 
+function newRound()
    arrow_list = {}
 
-   map = {
-      data = toMap(10, {
-         1, 1, 1, 1 ,1, 1, 1, 1, 1 ,1,
-         1, 0, 0, 0, 1, 1, 1, 1, 1 ,1,
-         1, 0, 0, 0, 1, 1, 1, 1, 1 ,1,
-         1, 0, 0, 1, 1, 1, 1, 1, 1 ,1,
-         1, 0, 0, 1 ,1, 1, 1, 1, 1 ,1,
-         1, 0, 0, 0 ,0, 0, 0, 0, 0 ,1,
-         1, 0, 0, 0 ,0, 0, 0, 0, 0 ,1,
-         1, 0, 0, 1 ,1, 0, 0, 0, 0 ,1,
-         1, 0, 0, 0 ,0, 0, 0, 0, 0 ,1,
-         1, 1, 1, 1 ,1, 1, 1, 1, 1 ,1,
-      })
-   } -- Map
+   archer_list[1].hits = 0
+   archer_list[1].arrows = 3
+   archer_list[1].x = map.start1.x
+   archer_list[1].y = map.start1.y
+   archer_list[1].isAlive = true
+
+   archer_list[2].hits = 0
+   archer_list[2].arrows = 3
+   archer_list[2].x = map.start2.x
+   archer_list[2].y = map.start2.y
+   archer_list[2].isAlive = true
+
 
 end
 
@@ -190,7 +218,13 @@ end
 
 function love.update(dt)
    -- archer
+   local aliveCount = 0
+   local archerAlive = nil
    for i,archer in ipairs(archer_list) do
+      if archer.isAlive then
+         aliveCount = aliveCount + 1
+         archerAlive = archer
+      end
       if love.keyboard.isDown( archer.key.left ) then
          archer.x = archer.x - dt * const.archer.speed
          archer.facing = "left"
@@ -313,12 +347,23 @@ function love.update(dt)
                arrow.archerOffset.x = arrow.x - archer.x
                arrow.archerOffset.y = arrow.y - archer.y
                arrow.stuckTime = 0
+               if archer.hits >= 3 then
+                  archer.isAlive = false
+               end
 
             end
          end
 
       end
 
+   end
+
+   -- End Game
+   if aliveCount <= 1 then
+      if archerAlive ~= nil then
+         archerAlive.wins = archerAlive.wins + 1
+      end
+      newRound()
    end
 
    -- arrow
@@ -432,8 +477,9 @@ function love.draw()
          -- Flip the archer. This also changes it's x pos
          love.graphics.draw(archer.img, archer.x + const.archer.img_width, archer.y, 0, -1, 1)
       end
-      love.graphics.print(archer.hits, i * 20, 400)
+      love.graphics.print(archer.hits,   i * 20, 400)
       love.graphics.print(archer.arrows, i * 20, 415)
+      love.graphics.print(archer.wins,   i * 20, 430)
    end
 
    -- Draw Archer Hitbox
