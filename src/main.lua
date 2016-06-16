@@ -58,7 +58,7 @@ function love.load()
       archer   = love.graphics.newImage("assets/archer.png"),
       archer2  = love.graphics.newImage("assets/archer2.png"),
       platform = love.graphics.newImage("assets/platform.png")
-   }
+   } -- images
 
 
    archer_list = {
@@ -102,7 +102,7 @@ function love.load()
          hits = 0,
          arrows = 3
       }
-   }
+   } -- Archer List
    
 
    arrow_list = {}
@@ -120,7 +120,7 @@ function love.load()
          1, 0, 0, 0 ,0, 0, 0, 0, 0 ,1,
          1, 1, 1, 1 ,1, 1, 1, 1, 1 ,1,
       })
-   }
+   } -- Map
 
 end
 
@@ -174,9 +174,14 @@ function love.keyreleased(key)
             vy = archer.vy,
             vx = speed,
             state = "flying",
+            facing = archer.facing,
             stuckTime = 0,
-            previousVictim = archer
-         }
+            previousVictim = archer,
+            archerOffset = {
+               x = 0,
+               y = 0
+            }
+         } -- New Arrow
          table.insert(arrow_list, new_arrow)
          archer.arrows = archer.arrows - 1
       end
@@ -297,12 +302,18 @@ function love.update(dt)
                table.remove(arrow_list, i)
                archer.arrows = archer.arrows + 1
             end
-         else
+         elseif arrow.state == "flying" or 
+            arrow.state == "falling" then
             if collisionAABB(arrow_hitbox, archer_hitbox) and
                arrow.previousVictim ~= archer then
                -- hit
                arrow.previousVictim = archer
                archer.hits = archer.hits + 1
+               arrow.state = "archer"
+               arrow.archerOffset.x = arrow.x - archer.x
+               arrow.archerOffset.y = arrow.y - archer.y
+               arrow.stuckTime = 0
+
             end
          end
 
@@ -335,7 +346,13 @@ function love.update(dt)
          arrow.vy = arrow.vy + const.phys.grav * dt
          arrow.y = arrow.y + arrow.vy * dt
          arrow.x = arrow.x + arrow.vx * dt
-
+      elseif arrow.state == "archer" then
+         arrow.x = arrow.previousVictim.x + arrow.archerOffset.x
+         arrow.y = arrow.previousVictim.y + arrow.archerOffset.y
+      end
+      if arrow.state == "stuck" or 
+         arrow.state == "archer" then
+         arrow.stuckTime = arrow.stuckTime + dt
       end
 
 
@@ -363,7 +380,6 @@ function love.update(dt)
      
          end
       elseif arrow.state == "stuck" then
-         arrow.stuckTime = arrow.stuckTime + dt
          if arrow.stuckTime >= const.arrow.stuck.timeout then
 
             if arrow.vx < 0 then
@@ -373,6 +389,7 @@ function love.update(dt)
             arrow.state = "falling"
             arrow.vx = 0
             arrow.vy = 0
+            arrow.facing = "down"
             
          end 
       elseif arrow.state == "falling" then         
@@ -389,6 +406,14 @@ function love.update(dt)
                break;
             end
          end
+      elseif arrow.state == "archer" then
+         if arrow.stuckTime >= const.arrow.stuck.timeout then
+            arrow.state = "falling"
+            arrow.vx = 0
+            arrow.vy = arrow.previousVictim.vy
+            arrow.facing = "down"
+         end
+
       end
 
    end
@@ -423,13 +448,12 @@ function love.draw()
 
    -- Arrows
    for i,arrow in ipairs(arrow_list) do
-      if arrow.state == "falling" or 
-         arrow.state == "fallen" then
+      if arrow.facing == "down" then
          love.graphics.draw(arrow.img, arrow.x, arrow.y, math.rad(90), 1, 1, 0, 0)
 
-      elseif arrow.vx > 0 then
+      elseif arrow.facing == "right" then
          love.graphics.draw(arrow.img, arrow.x, arrow.y)
-      else
+      elseif arrow.facing == "left" then
          -- Flip the archer. This also changes it's x pos
          love.graphics.draw(arrow.img, arrow.x + const.arrow.img_width, arrow.y, 0, -1, 1)
       end
