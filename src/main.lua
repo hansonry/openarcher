@@ -56,6 +56,7 @@ function love.load()
    images = {
       arrow    = love.graphics.newImage("assets/arrow2.png"),
       archer   = love.graphics.newImage("assets/archer.png"),
+      archer2  = love.graphics.newImage("assets/archer2.png"),
       platform = love.graphics.newImage("assets/platform.png")
    }
 
@@ -77,6 +78,24 @@ function love.load()
             right = const.key.player1.right,
             jump  = const.key.player1.jump,
             shoot = const.key.player1.shoot
+         }
+      },
+      {
+         img = images.archer2,
+         x = 200,
+         y = 200,
+         vy = 0,
+         facing = "right",
+         onGround = false,
+         bow = {
+            chargingTime = 0,
+            isPulling = false 
+         },
+         key = {
+            left  = const.key.player2.left,
+            right = const.key.player2.right,
+            jump  = const.key.player2.jump,
+            shoot = const.key.player2.shoot
          }
       }
    }
